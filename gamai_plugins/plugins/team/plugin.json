@@ -1,6 +1,6 @@
 {
   "name": "team",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "apiVersion": "1",
   "description": "Deterministic team coordinator with persistent state, an isolated clone/workspace and at most one optional LLM call per task.",
   "tools": [

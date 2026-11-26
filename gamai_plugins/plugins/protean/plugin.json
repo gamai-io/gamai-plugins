@@ -1,6 +1,6 @@
 {
   "name": "protean",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "apiVersion": "1",
   "description": "Lease-bound sandbox runner: HMAC-SHA256 leases with TTL, risk-routed substrates (bubblewrap, Docker runc, Docker + seccomp, optional remote gVisor) and JSONL evidence. The lease is an internal consistency/evidence receipt, not caller authorization.",
   "tools": [
@@ -59,6 +59,22 @@
       ],
       "timeout_s": 60,
       "side_effect": "write"
+    },
+    {
+      "name": "verify-evidence",
+      "description": "Verify the HMAC of every line in a protean evidence JSONL file; an edited line is detected without the lease key.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "timeout_s": 20
     }
   ]
 }

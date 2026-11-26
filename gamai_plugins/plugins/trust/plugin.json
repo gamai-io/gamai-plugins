@@ -1,6 +1,6 @@
 {
   "name": "trust",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "apiVersion": "1",
   "description": "Policy evaluator and package-integrity verifier. It never executes package code and never enforces a decision; callers must enforce the returned allow/deny.",
   "tools": [

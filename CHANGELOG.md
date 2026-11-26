@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.11 — 2026-11-26
+- `protean verify-evidence --path FILE` (CLI and MCP) verifies every evidence
+  line's HMAC; an edited line is reported with its 1-based index.
+
+
 ## 0.2.10 — 2026-11-26
 - MCP `tools/call` with a non-object `params` returns JSON-RPC -32602 instead of
   exiting.

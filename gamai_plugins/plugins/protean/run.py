@@ -845,8 +845,18 @@ def handle_run(raw):
 
 def main(argv):
     tool = argv[1] if len(argv) > 1 else ""
+    if tool == "verify-evidence":
+        try:
+            raw = json.loads(sys.stdin.buffer.read(65536).decode("utf-8") or "{}")
+        except (ValueError, UnicodeDecodeError) as exc:
+            return emit({"ok": False, "err": "nevalidan JSON: %s" % str(exc)[:120]})
+        path = str(raw.get("path") or "")
+        if not path or not os.path.isfile(path):
+            return emit({"ok": False, "err": "path ne postoji"})
+        ok, checked, bad = verify_evidence(path)
+        return emit({"ok": ok, "checked": checked, "bad_line": bad, "path": path})
     if tool != "run":
-        return emit({"ok": False, "err": "nepoznat alat (ocekivano: run)"})
+        return emit({"ok": False, "err": "nepoznat alat (run|verify-evidence)"})
     try:
         body = sys.stdin.buffer.read(131072).decode("utf-8", "replace")
         raw = json.loads(body or "{}")
