@@ -5,11 +5,12 @@ Portable, dependency-light plugins for AI agents: **policy evaluation**,
 MCP server, a CLI and a plain Python function, so it can run in Claude Code,
 opencode, Codex, Cursor, LangChain or a custom agent loop.
 
-> Status: `0.2.8`
+> Status: `0.2.9`
 >
-> 0.2.6 is yanked: it predates the RT5 fixes (a shell-metacharacter deny bypass
-> and a package reported `verified` while `node_modules`/`.git` were never hashed).
-> Install `>=0.2.8`. — small, explicit about its limits, and hardened against the
+> 0.2.6 predates the RT5 fixes (a shell-metacharacter deny bypass and a package
+> reported `verified` while `node_modules`/`.git` were never hashed). New installs
+> resolve to 0.2.9; if you pinned `==0.2.6`, move to `>=0.2.9`. Yanking 0.2.6 is a
+> web action and the account login is currently blocked; it is not claimed here. — small, explicit about its limits, and hardened against the
 > failures found in an external-style audit. `protean` is a namespace sandbox,
 > not a VM and not a hardened multi-tenant boundary.
 

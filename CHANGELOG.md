@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.9 — 2026-11-26
+- Documentation only: the README no longer claims 0.2.6 is yanked. New installs
+  resolve to 0.2.9; yanking is a PyPI web action and the login is blocked.
+
+
 ## 0.2.8 — 2026-11-26
 - The protean allowlist now checks every shell segment and the inside of
   `sh -c '...'`, so `sh -c 'rm ...'`, `( env )` and `echo $(...)` no longer slip
