@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "gamai-plugins": {
+      "command": "gamai-plugins-mcp"
+    }
+  }
+}

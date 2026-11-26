@@ -1,0 +1,105 @@
+{
+  "name": "team",
+  "version": "0.2.2",
+  "apiVersion": "1",
+  "description": "Deterministic team coordinator with persistent state, an isolated clone/workspace and at most one optional LLM call per task.",
+  "tools": [
+    {
+      "name": "team_create",
+      "description": "Create a team for a goal. The coordinator deterministically splits the goal into subtasks (no LLM), assigns them to members and creates an isolated workspace under ~/.cache/gamai/teams/<id>/ (shared clone or plain directory). State persists in ~/.local/state/gamai/teams/<id>.json. args: goal (required), agents (integer 2-8 or list of agent names; default 2), repo (optional git repo for a shared clone). Returns {ok, team_id, agents, tasks, isolation, state_path}.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "goal": {
+            "type": "string",
+            "description": "team goal (3-4000 characters)"
+          },
+          "agents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 8
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "number of agents (2-8) or a list of agent names, e.g. [\"agent-a\",\"agent-b\"]; default 2"
+          },
+          "repo": {
+            "type": "string",
+            "description": "optional path to a git repo; a shared clone with hooks disabled is created"
+          }
+        },
+        "required": [
+          "goal"
+        ],
+        "additionalProperties": false
+      },
+      "command": [
+        "python3",
+        "run.py",
+        "team_create"
+      ],
+      "timeout_s": 200,
+      "side_effect": "write"
+    },
+    {
+      "name": "team_dispatch",
+      "description": "Dispatch ONE task to ONE team member. task may be an existing task id (t1) or new text (added and assigned to the least-loaded member). Makes at most one optional LLM call through the configured HTTP(S) endpoint (GAMAI_LLM_URL); redirects are not followed and public plain HTTP is refused. If the LLM is unavailable or the budget is exhausted, returns a deterministic fallback and records it in engine. Re-dispatching a finished task is cached (no LLM). Returns {ok, team_id, task_id, assignee, engine, result, llm_calls, results_done, team_done, summary}.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string",
+            "description": "team id from team_create"
+          },
+          "task": {
+            "type": "string",
+            "description": "task id (t1) or new task text"
+          }
+        },
+        "required": [
+          "team_id",
+          "task"
+        ],
+        "additionalProperties": false
+      },
+      "command": [
+        "python3",
+        "run.py",
+        "team_dispatch"
+      ],
+      "timeout_s": 60,
+      "side_effect": "write"
+    },
+    {
+      "name": "team_status",
+      "description": "Return persistent team state (survives sessions/processes): goal, members, tasks with results, progress, LLM call count, isolated workspace and file list. args: team_id.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string",
+            "description": "team id from team_create"
+          }
+        },
+        "required": [
+          "team_id"
+        ],
+        "additionalProperties": false
+      },
+      "command": [
+        "python3",
+        "run.py",
+        "team_status"
+      ],
+      "timeout_s": 15,
+      "side_effect": "read"
+    }
+  ]
+}

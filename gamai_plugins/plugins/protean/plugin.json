@@ -1,0 +1,64 @@
+{
+  "name": "protean",
+  "version": "0.2.2",
+  "apiVersion": "1",
+  "description": "Lease-bound sandbox runner: HMAC-SHA256 leases with TTL, risk-routed substrates (bubblewrap, Docker runc, Docker + seccomp, optional remote gVisor) and JSONL evidence. The lease is an internal consistency/evidence receipt, not caller authorization.",
+  "tools": [
+    {
+      "name": "run",
+      "description": "Run a command inside a lease-bound sandbox. risk=low -> bubblewrap with a minimal read-only root and 32 MiB /tmp; medium -> Docker runc (--network=none, cap-drop ALL, read-only, tmpfs /tmp); high -> Docker + seccomp allowlist (or gVisor if available); critical -> denied locally unless remote=true and a remote host is configured. Only the first executable token is checked; shell syntax can run other binaries inside the sandbox. Unknown risk/substrate, invalid or expired lease, TTL overflow, net=true for medium/high/critical, and executables outside the allowlist are denied (fail-closed). Returns rc, clipped stdout/stderr, ms, substrate, genome_hash, lease_id, out_sha256 and evidence path.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "cmd": {
+            "type": "string",
+            "description": "Command to execute inside the sandbox (1..4096 chars, no NUL). Only the first executable token is checked against the allowlist."
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "description": "Risk class selects the substrate. critical requires remote=true plus a configured remote host."
+          },
+          "net": {
+            "type": "boolean",
+            "description": "Allow network. Default false. Only risk=low supports net=true; medium/high/critical are network-isolated."
+          },
+          "timeout_s": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 45,
+            "description": "Execution timeout in seconds (default 20). Lease TTL is derived from it and verified before execution."
+          },
+          "workdir": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Absolute working directory inside the sandbox (default /tmp). Must not contain ..; the directory must exist in the sandbox."
+          },
+          "remote": {
+            "type": "boolean",
+            "description": "Only for risk=critical: run on the configured remote host over SSH with gVisor. Denied for lower risks."
+          }
+        },
+        "required": [
+          "cmd",
+          "risk"
+        ],
+        "additionalProperties": false
+      },
+      "command": [
+        "python3",
+        "run.py",
+        "run"
+      ],
+      "timeout_s": 60,
+      "side_effect": "write"
+    }
+  ]
+}

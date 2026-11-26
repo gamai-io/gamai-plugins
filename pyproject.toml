@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gamai-plugins"
+version = "0.2.6"
+description = "Portable trust, sandbox and team plugins for AI agents (MCP + CLI)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Renato Šuster", email = "renato@gamatrade.ba"}]
+keywords = ["ai-agents", "mcp", "sandbox", "trust", "team"]
+dependencies = []
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Microsoft :: Windows",
+  "Topic :: Security",
+]
+
+[project.urls]
+Homepage = "https://github.com/gamai-io/gamai-plugins"
+Repository = "https://github.com/gamai-io/gamai-plugins"
+Issues = "https://github.com/gamai-io/gamai-plugins/issues"
+
+[project.optional-dependencies]
+crypto = ["cryptography>=42"]
+
+[project.scripts]
+gamai-plugins = "gamai_plugins.cli:main"
+gamai-plugins-mcp = "gamai_plugins.mcp:main"
+gamai-plugins-trust = "gamai_plugins.cli:trust_main"
+gamai-protean = "gamai_plugins.cli:protean_main"
+gamai-team = "gamai_plugins.cli:team_main"
+
+[tool.setuptools]
+packages = ["gamai_plugins"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+gamai_plugins = [
+  "plugins/*/*.py",
+  "plugins/*/*.json",
+]

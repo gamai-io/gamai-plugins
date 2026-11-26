@@ -1,0 +1,201 @@
+{
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "trust_managed_policy",
+        "description": "Evaluate a managed policy. action=load returns the loaded policy and rule counts; action=check takes {tool,command,path} and returns allow|deny plus matched rules (deny wins; missing/invalid policy or missing default => deny); action=list returns a summary and the last 20 audit records. Reads GAMAI_POLICY (default ~/.config/gamai/trust/policy.json). This is an evaluator, not an enforcement point.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "load",
+                "check",
+                "list"
+              ]
+            },
+            "tool": {
+              "type": "string",
+              "description": "tool name, e.g. shell or plugin__trust__managed_policy"
+            },
+            "command": {
+              "type": "string",
+              "description": "shell command or action text to evaluate"
+            },
+            "path": {
+              "type": "string",
+              "description": "optional path to evaluate"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "trust_marketplace_verify",
+        "description": "Verify package integrity without executing it: SHA-256 for every file, a manifest (manifest.json|TRUST.json|trust.json) with a files map, and an Ed25519 signature. Without a pinned public key (argument or GAMAI_TRUST_PUBKEY), a valid self-signature is reported as self_signed and is not trusted. Detects missing, mismatched, unexpected and symlinked content.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "folder paketa ili pojedinacni fajl"
+            },
+            "public_key": {
+              "type": "string",
+              "description": "pinned Ed25519 public key (PEM, 64 hex chars, or base64 raw 32-byte key); also GAMAI_TRUST_PUBKEY"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "protean_run",
+        "description": "Run a command inside a lease-bound sandbox. risk=low -> bubblewrap with a minimal read-only root and 32 MiB /tmp; medium -> Docker runc (--network=none, cap-drop ALL, read-only, tmpfs /tmp); high -> Docker + seccomp allowlist (or gVisor if available); critical -> denied locally unless remote=true and a remote host is configured. Only the first executable token is checked; shell syntax can run other binaries inside the sandbox. Unknown risk/substrate, invalid or expired lease, TTL overflow, net=true for medium/high/critical, and executables outside the allowlist are denied (fail-closed). Returns rc, clipped stdout/stderr, ms, substrate, genome_hash, lease_id, out_sha256 and evidence path.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string",
+              "description": "Command to execute inside the sandbox (1..4096 chars, no NUL). Only the first executable token is checked against the allowlist."
+            },
+            "risk": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "critical"
+              ],
+              "description": "Risk class selects the substrate. critical requires remote=true plus a configured remote host."
+            },
+            "net": {
+              "type": "boolean",
+              "description": "Allow network. Default false. Only risk=low supports net=true; medium/high/critical are network-isolated."
+            },
+            "timeout_s": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 45,
+              "description": "Execution timeout in seconds (default 20). Lease TTL is derived from it and verified before execution."
+            },
+            "workdir": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Absolute working directory inside the sandbox (default /tmp). Must not contain ..; the directory must exist in the sandbox."
+            },
+            "remote": {
+              "type": "boolean",
+              "description": "Only for risk=critical: run on the configured remote host over SSH with gVisor. Denied for lower risks."
+            }
+          },
+          "required": [
+            "cmd",
+            "risk"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "team_create",
+        "description": "Create a team for a goal. The coordinator deterministically splits the goal into subtasks (no LLM), assigns them to members and creates an isolated workspace under ~/.cache/gamai/teams/<id>/ (shared clone or plain directory). State persists in ~/.local/state/gamai/teams/<id>.json. args: goal (required), agents (integer 2-8 or list of agent names; default 2), repo (optional git repo for a shared clone). Returns {ok, team_id, agents, tasks, isolation, state_path}.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "goal": {
+              "type": "string",
+              "description": "team goal (3-4000 characters)"
+            },
+            "agents": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 2,
+                  "maximum": 8
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "number of agents (2-8) or a list of agent names, e.g. [\"agent-a\",\"agent-b\"]; default 2"
+            },
+            "repo": {
+              "type": "string",
+              "description": "optional path to a git repo; a shared clone with hooks disabled is created"
+            }
+          },
+          "required": [
+            "goal"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "team_dispatch",
+        "description": "Dispatch ONE task to ONE team member. task may be an existing task id (t1) or new text (added and assigned to the least-loaded member). Makes at most one optional LLM call through the configured HTTP(S) endpoint (GAMAI_LLM_URL); redirects are not followed and public plain HTTP is refused. If the LLM is unavailable or the budget is exhausted, returns a deterministic fallback and records it in engine. Re-dispatching a finished task is cached (no LLM). Returns {ok, team_id, task_id, assignee, engine, result, llm_calls, results_done, team_done, summary}.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "team_id": {
+              "type": "string",
+              "description": "team id from team_create"
+            },
+            "task": {
+              "type": "string",
+              "description": "task id (t1) or new task text"
+            }
+          },
+          "required": [
+            "team_id",
+            "task"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "team_status",
+        "description": "Return persistent team state (survives sessions/processes): goal, members, tasks with results, progress, LLM call count, isolated workspace and file list. args: team_id.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "team_id": {
+              "type": "string",
+              "description": "team id from team_create"
+            }
+          },
+          "required": [
+            "team_id"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}
