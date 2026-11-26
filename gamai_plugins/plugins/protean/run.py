@@ -333,8 +333,8 @@ def parse_args(raw):
             return None, "workdir mora biti apsolutna putanja ili null"
         if ".." in workdir.split("/") or len(workdir) > 256:
             return None, "nevalidan workdir"
-    if net and risk != "low":
-        return None, "net=true nije dozvoljen za risk=%s (mreza je iskljucena)" % risk
+    if net:
+        return None, "net=true nije podrzan: sandbox nema mrezu (ni host namespace)"
     if remote and risk != "critical":
         return None, "remote=true je dozvoljen samo za risk=critical"
     ok, err = check_tool(cmd)
@@ -350,17 +350,47 @@ def parse_args(raw):
     }, ""
 
 
-def check_tool(cmd):
-    stripped = cmd.lstrip()
+def _split_segments(command):
+    """Split shell separators outside quotes, so `python3 -c "..."` stays whole."""
+    out, buf, quote = [], [], None
+    i = 0
+    while i < len(command):
+        ch = command[i]
+        if quote:
+            buf.append(ch)
+            if ch == quote:
+                quote = None
+            i += 1
+            continue
+        if ch in "'\"":
+            quote = ch
+            buf.append(ch)
+            i += 1
+            continue
+        if command.startswith("$(", i):
+            out.append("".join(buf))
+            buf = []
+            i += 2
+            continue
+        if ch in ";|&`(){}\n":
+            out.append("".join(buf))
+            buf = []
+            i += 1
+            continue
+        buf.append(ch)
+        i += 1
+    out.append("".join(buf))
+    return out
+
+
+def _check_one(command):
+    stripped = command.strip()
     if not stripped:
-        return False, "prazna komanda"
-    first_char = stripped[0]
-    if first_char == "$":
+        return True, ""
+    if stripped[0] == "$":
         return False, "komanda ne smije pocinjati promjenljivom"
-    match = FIRST_TOKEN_RE.match(cmd)
+    match = FIRST_TOKEN_RE.match(stripped)
     if not match:
-        if first_char in "({!":
-            return True, ""
         return False, "ne mogu odrediti izvrsni program"
     token = match.group(2)
     if token in SHELL_KEYWORDS:
@@ -368,6 +398,22 @@ def check_tool(cmd):
     base = os.path.basename(token)
     if base not in TOOLS:
         return False, "izvrsni program nije u genome allowlisti: %s" % base[:64]
+    return True, ""
+
+
+def check_tool(cmd):
+    """Best-effort allowlist: every shell segment, including `sh -c '...'`.
+
+    This is not a shell parser; SECURITY.md says the sandbox is the boundary.
+    """
+    for match in re.finditer(r"\b(?:sh|bash|dash|zsh)\s+-c\s+(['\"])(.*?)\1", cmd, re.S):
+        ok, err = check_tool(match.group(2))
+        if not ok:
+            return ok, err
+    for segment in _split_segments(cmd):
+        ok, err = _check_one(segment)
+        if not ok:
+            return ok, err
     return True, ""
 
 
@@ -419,7 +465,7 @@ def ssh_base():
         "ssh", "-i", REMOTE_KEY, "-p", REMOTE_PORT, "-o", "BatchMode=yes",
         "-o", "ConnectTimeout=6", "-o", "StrictHostKeyChecking=" + SSH_STRICT,
         "-o", "UserKnownHostsFile=" + KNOWN_HOSTS,
-        "%s@%s" % (REMOTE_USER, REMOTE_HOST), "--",
+        "--", "%s@%s" % (REMOTE_USER, REMOTE_HOST),
     ]
 
 
@@ -516,8 +562,7 @@ def run_local_bwrap(args, timeout_s):
         "--unshare-user", "--unshare-pid", "--unshare-ipc", "--unshare-uts",
         "--unshare-cgroup",
     ]
-    if not args["net"]:
-        argv.append("--unshare-net")
+    argv.append("--unshare-net")
     argv += ["--cap-drop", "ALL"]
     for root in BWRAP_ROOTS:
         if os.path.exists(root):

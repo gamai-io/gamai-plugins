@@ -7,6 +7,28 @@ from unittest.mock import patch
 from gamai_plugins.cli import call
 
 
+class Allowlist(unittest.TestCase):
+    def test_shell_wrappers_cannot_hide_a_denied_program(self):
+        from gamai_plugins.plugins.protean import run as protean
+        for command in ("sh -c 'rm -rf /'", "( env )", "echo $(rm -rf /)",
+                        "bash -c 'curl http://x'"):
+            ok, _why = protean.check_tool(command)
+            self.assertFalse(ok, command)
+
+    def test_an_allowed_program_inside_a_wrapper_is_fine(self):
+        from gamai_plugins.plugins.protean import run as protean
+        for command in ("sh -c 'ls /'", "if true; then ls; fi", "echo hi"):
+            ok, why = protean.check_tool(command)
+            self.assertTrue(ok, (command, why))
+
+    def test_network_is_refused_even_at_low_risk(self):
+        from gamai_plugins.plugins.protean import run as protean
+        parsed, error = protean.parse_args(
+            {"cmd": "ls", "risk": "low", "net": True, "timeout_s": 5})
+        self.assertIsNone(parsed)
+        self.assertIn("mrezu", error)
+
+
 class ProteanTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

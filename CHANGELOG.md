@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.8 — 2026-11-26
+- The protean allowlist now checks every shell segment and the inside of
+  `sh -c '...'`, so `sh -c 'rm ...'`, `( env )` and `echo $(...)` no longer slip
+  past a first-token check. Still best-effort: the sandbox is the boundary.
+- `net=true` is refused: the bwrap path dropped `--unshare-net` and shared the
+  host network namespace. No substrate grants network now.
+- Remote gVisor: `ssh` options now end with `--` before the destination, so the
+  remote command is not prefixed with `--` (it never ran).
+- 0.2.6 is yanked on PyPI; 0.2.7 published the deny/integrity fixes.
+
 ## 0.2.7 — 2026-11-26
 - A deny rule can no longer be bypassed with a bare `&`, `$(...)`, backticks or a
   subshell: the splitter treats them as separators and the whole command is
