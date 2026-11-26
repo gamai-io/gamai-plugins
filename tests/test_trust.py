@@ -78,6 +78,24 @@ class TrustTests(unittest.TestCase):
         self.assertEqual(r["missing"], [])
         self.assertEqual(r["mismatch"], [])
 
+    def test_a_relative_path_cannot_dodge_a_path_deny_rule(self):
+        with open(self.policy, "w", encoding="utf-8") as fh:
+            json.dump({"version": 1, "default": "deny", "audit": False,
+                       "deny": {"paths": ["/etc/*"]}}, fh)
+        here = os.getcwd()
+        with tempfile.TemporaryDirectory() as tmp:
+            deep = os.path.join(tmp, "a", "b")
+            os.makedirs(deep)
+            os.chdir(deep)
+            try:
+                with patch.dict(os.environ, self.env, clear=False):
+                    r = call("trust", "managed_policy",
+                             {"action": "check", "tool": "read",
+                              "path": "../../etc/passwd"})
+            finally:
+                os.chdir(here)
+        self.assertEqual(r["decision"], "deny")
+
     def test_files_inside_skipped_dirs_cannot_hide_from_the_verifier(self):
         root = os.path.join(self.tmp.name, "pkg")
         os.makedirs(root)

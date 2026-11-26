@@ -332,11 +332,21 @@ def tool_managed_policy(args):
         return err("no_subject", "check trazi barem jedno od: tool, command, path")
 
     match_path = os.path.normpath(path).replace("\\", "/") if path else None
+    path_forms = [match_path] if match_path else []
+    if path:
+        absolute = os.path.abspath(path).replace("\\", "/")
+        if absolute not in path_forms:
+            path_forms.append(absolute)
     if policy is None:
         decision, reason, hits = "deny", "fail_closed:%s" % error, []
     else:
-        deny_hits = rule_hits_all(policy.get("deny") or {}, tool, command, match_path)
-        allow_hits = rule_hits_all(policy.get("allow") or {}, tool, command, match_path)
+        deny_hits = []
+        allow_hits = []
+        for form in path_forms or [None]:
+            deny_hits += rule_hits_all(policy.get("deny") or {}, tool, command, form)
+            allow_hits += rule_hits_all(policy.get("allow") or {}, tool, command, form)
+        deny_hits = list(dict.fromkeys(deny_hits))
+        allow_hits = list(dict.fromkeys(allow_hits))
         if deny_hits:
             decision, reason, hits = "deny", "deny_rule", deny_hits
         elif allow_hits:

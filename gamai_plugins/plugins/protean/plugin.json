@@ -1,6 +1,6 @@
 {
   "name": "protean",
-  "version": "0.2.2",
+  "version": "0.2.10",
   "apiVersion": "1",
   "description": "Lease-bound sandbox runner: HMAC-SHA256 leases with TTL, risk-routed substrates (bubblewrap, Docker runc, Docker + seccomp, optional remote gVisor) and JSONL evidence. The lease is an internal consistency/evidence receipt, not caller authorization.",
   "tools": [

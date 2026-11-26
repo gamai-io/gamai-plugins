@@ -29,6 +29,34 @@ class Allowlist(unittest.TestCase):
         self.assertIn("mrezu", error)
 
 
+class EvidenceIntegrity(unittest.TestCase):
+    def test_each_evidence_line_is_hmac_signed_and_tampering_is_detected(self):
+        from gamai_plugins.plugins.protean import run as protean
+        key = protean.load_lease_key()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "evidence.jsonl")
+            record = {"ok": True, "tool": "run", "cmd_sha": "abc", "risk": "low"}
+            record["ev_hmac"] = protean.evidence_mac(record, key)
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(__import__("json").dumps(record) + "\n")
+            self.assertEqual(protean.verify_evidence(path), (True, 1, 0))
+            record["cmd_sha"] = "forged"
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(__import__("json").dumps(record) + "\n")
+            ok, checked, bad = protean.verify_evidence(path)
+            self.assertFalse(ok)
+            self.assertEqual(bad, 1)
+
+    @unittest.skipUnless(shutil.which("bwrap"), "bubblewrap is not installed")
+    def test_the_sandbox_does_not_run_as_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict(os.environ, {"PROTEAN_HOME": tmp}, clear=False):
+                r = call("protean", "run", {"cmd": "id -u", "risk": "low",
+                                            "timeout_s": 5})
+        self.assertTrue(r.get("ok"), r)
+        self.assertEqual((r.get("out") or "").strip(), "65534")
+
+
 class ProteanTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

@@ -44,9 +44,14 @@ def handle(req):
     if method == "tools/list":
         return {"jsonrpc": "2.0", "id": rid, "result": {"tools": _tool_list()}}
     if method == "tools/call":
-        params = req.get("params") or {}
+        params = req.get("params")
+        if not isinstance(params, dict):
+            return {"jsonrpc": "2.0", "id": rid,
+                    "error": {"code": -32602, "message": "params must be an object"}}
         name = params.get("name") or ""
         args = params.get("arguments") or {}
+        if not isinstance(args, dict):
+            args = {}
         t = _find(name)
         if t is None:
             return {"jsonrpc": "2.0", "id": rid, "error": {"code": -32601, "message": "unknown tool %r" % name}}

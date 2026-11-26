@@ -559,7 +559,8 @@ def run_local_bwrap(args, timeout_s):
         }
     argv = [
         "bwrap", "--die-with-parent", "--new-session",
-        "--unshare-user", "--unshare-pid", "--unshare-ipc", "--unshare-uts",
+        "--unshare-user", "--uid", "65534", "--gid", "65534",
+        "--unshare-pid", "--unshare-ipc", "--unshare-uts",
         "--unshare-cgroup",
     ]
     argv.append("--unshare-net")
@@ -707,6 +708,34 @@ def _prune_evidence():
         shutil.rmtree(os.path.join(RUNS_DIR, name), ignore_errors=True)
 
 
+def evidence_mac(record, key):
+    body = {k: v for k, v in record.items() if k != "ev_hmac"}
+    return hmac.new(key, json.dumps(body, sort_keys=True,
+                                    ensure_ascii=False).encode("utf-8"),
+                    hashlib.sha256).hexdigest()
+
+
+def verify_evidence(path):
+    """Return (ok, checked, bad_index): a line edited without the lease key fails."""
+    try:
+        key = load_lease_key()
+    except Exception as exc:
+        return False, 0, str(exc)
+    bad = 0
+    checked = 0
+    for index, line in enumerate(open(path, encoding="utf-8")):
+        line = line.strip()
+        if not line:
+            continue
+        rec = json.loads(line)
+        checked += 1
+        if not hmac.compare_digest(str(rec.get("ev_hmac") or ""),
+                                   evidence_mac(rec, key)):
+            bad = index + 1          # 1-based; 0 means "no bad line"
+            break
+    return bad == 0, checked, bad
+
+
 def write_evidence(record):
     os.makedirs(RUNS_DIR, mode=0o700, exist_ok=True)
     _prune_evidence()
@@ -715,6 +744,10 @@ def write_evidence(record):
     subdir = os.path.join(RUNS_DIR, "%s-%s" % (stamp, lease[-6:]))
     os.makedirs(subdir, mode=0o700, exist_ok=True)
     path = os.path.join(subdir, "evidence.jsonl")
+    try:
+        record = dict(record, ev_hmac=evidence_mac(record, load_lease_key()))
+    except Exception:
+        pass
     line = json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n"
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
     try:

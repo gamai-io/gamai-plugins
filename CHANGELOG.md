@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.10 — 2026-11-26
+- MCP `tools/call` with a non-object `params` returns JSON-RPC -32602 instead of
+  exiting.
+- The bwrap sandbox runs as uid/gid 65534 inside the namespace, not as root.
+- Trust path rules also match the absolute path, so `../../etc/passwd` cannot
+  dodge a `/etc/*` deny rule.
+- Protean evidence lines carry an HMAC from `lease.key`; `verify_evidence(path)`
+  detects an edited line. (No CLI wrapper yet.)
+- One version everywhere: `__version__` and plugin.json said 0.2.2.
+
+
 ## 0.2.9 — 2026-11-26
 - Documentation only: the README no longer claims 0.2.6 is yanked. New installs
   resolve to 0.2.9; yanking is a PyPI web action and the login is blocked.

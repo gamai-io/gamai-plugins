@@ -5,7 +5,7 @@ Portable, dependency-light plugins for AI agents: **policy evaluation**,
 MCP server, a CLI and a plain Python function, so it can run in Claude Code,
 opencode, Codex, Cursor, LangChain or a custom agent loop.
 
-> Status: `0.2.9`
+> Status: `0.2.10`
 >
 > 0.2.6 predates the RT5 fixes (a shell-metacharacter deny bypass and a package
 > reported `verified` while `node_modules`/`.git` were never hashed). New installs
