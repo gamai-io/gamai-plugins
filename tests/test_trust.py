@@ -49,6 +49,18 @@ class TrustTests(unittest.TestCase):
         if os.name == "posix":
             self.assertEqual(stat.S_IMODE(os.stat(self.audit).st_mode), 0o600)
 
+    def test_shell_metacharacters_do_not_bypass_a_deny_rule(self):
+        with open(self.policy, "w", encoding="utf-8") as fh:
+            json.dump({"version": 1, "default": "deny", "audit": False,
+                       "allow": {"tools": ["shell"]},
+                       "deny": {"commands": ["rm -rf*", "re:^\\s*sudo\\b"]}}, fh)
+        with patch.dict(os.environ, self.env, clear=False):
+            for command in ("ls & rm -rf /", "echo $(rm -rf /)",
+                            "echo `sudo id`", "( rm -rf / )"):
+                r = call("trust", "managed_policy",
+                         {"action": "check", "tool": "shell", "command": command})
+                self.assertEqual(r["decision"], "deny", command)
+
     def test_marketplace_manifest_is_unsigned_but_ok(self):
         root = os.path.join(self.tmp.name, "pkg")
         os.makedirs(root)
@@ -65,6 +77,27 @@ class TrustTests(unittest.TestCase):
         self.assertTrue(r["hashes_ok"])
         self.assertEqual(r["missing"], [])
         self.assertEqual(r["mismatch"], [])
+
+    def test_files_inside_skipped_dirs_cannot_hide_from_the_verifier(self):
+        root = os.path.join(self.tmp.name, "pkg")
+        os.makedirs(root)
+        body = b"hello\n"
+        with open(os.path.join(root, "a.txt"), "wb") as fh:
+            fh.write(body)
+        digest = hashlib.sha256(body).hexdigest()
+        with open(os.path.join(root, "manifest.json"), "w", encoding="utf-8") as fh:
+            json.dump({"name": "demo", "version": "1.0.0",
+                       "files": {"a.txt": digest}}, fh)
+        os.makedirs(os.path.join(root, "node_modules"))
+        with open(os.path.join(root, "node_modules", "evil.js"), "w",
+                  encoding="utf-8") as fh:
+            fh.write("process.exit(1)\n")
+        with patch.dict(os.environ, self.env, clear=False):
+            r = call("trust", "marketplace_verify", {"path": root})
+        self.assertTrue(r["skipped_content"])
+        self.assertFalse(r["complete"])
+        self.assertFalse(r["ok"])
+        self.assertNotEqual(r["status"], "verified")
 
 
 if __name__ == "__main__":

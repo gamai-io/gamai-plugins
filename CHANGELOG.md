@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.7 — 2026-11-26
+- A deny rule can no longer be bypassed with a bare `&`, `$(...)`, backticks or a
+  subshell: the splitter treats them as separators and the whole command is
+  matched as well.
+- `marketplace_verify` no longer says `complete`/`verified` while files inside
+  `node_modules`, `.git`, `__pycache__`, etc. were never hashed. `skipped_content`
+  is reported and makes the result incomplete.
+- Not yet on PyPI (publishing needs the account login); install from git.
+
 ## 0.2.2 — 2026-10-22
 
 - `trust`: added `scripts/sign_manifest.py` and `docs/MANIFEST.md` for the

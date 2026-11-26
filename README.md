@@ -5,7 +5,12 @@ Portable, dependency-light plugins for AI agents: **policy evaluation**,
 MCP server, a CLI and a plain Python function, so it can run in Claude Code,
 opencode, Codex, Cursor, LangChain or a custom agent loop.
 
-> Status: `0.2.6` — small, explicit about its limits, and hardened against the
+> Status: `0.2.7`
+>
+> **PyPI 0.2.6 predates the RT5 fixes** (a shell-metacharacter deny bypass and a
+> package reported `verified` while `node_modules`/`.git` were never hashed).
+> Until 0.2.7 is published, install from this repository:
+> `pip install "git+https://github.com/gamai-io/gamai-plugins@main"`. — small, explicit about its limits, and hardened against the
 > failures found in an external-style audit. `protean` is a namespace sandbox,
 > not a VM and not a hardened multi-tenant boundary.
 

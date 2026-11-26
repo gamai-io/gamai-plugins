@@ -174,7 +174,7 @@ def matches(pattern, value):
     return fnmatch.fnmatchcase(value.lower(), pattern.lower())
 
 
-_SHELL_SPLIT_RE = re.compile(r"(?:\r?\n|;|&&|\|\||\|)")
+_SHELL_SPLIT_RE = re.compile(r"(?:\r?\n|;|&&|\|\||\||&|\$\(|\)|`|\{|\}|\(|\))")
 
 
 def _command_segments(command):
@@ -194,7 +194,7 @@ def rule_hits(rules, tool, command, path):
 
 
 def rule_hits_all(rules, tool, command, path):
-    hits = []
+    hits = rule_hits(rules, tool, command, path)
     for segment in _command_segments(command):
         hits += rule_hits(rules, tool, segment, path)
     return list(dict.fromkeys(hits))
@@ -372,10 +372,11 @@ def collect_files(root):
     """Return ({relpath: abspath}, symlinks_skipped, truncated, errors)."""
     files = {}
     skipped_symlinks = 0
+    skipped_content = False
     truncated = False
     errors = []
     if os.path.isfile(root):
-        return {os.path.basename(root): root}, 0, False, errors
+        return {os.path.basename(root): root}, 0, False, False, errors
 
     def onerror(exc):
         errors.append(str(exc))
@@ -384,6 +385,12 @@ def collect_files(root):
         keep = []
         for d in dirnames:
             if d in SKIP_DIRS:
+                # hashing nothing here and calling the package complete would
+                # say "verified" about files nobody looked at
+                for _dirpath, _dirnames, names in os.walk(os.path.join(dirpath, d)):
+                    if names:
+                        skipped_content = True
+                        break
                 continue
             full = os.path.join(dirpath, d)
             if os.path.islink(full):
@@ -405,7 +412,7 @@ def collect_files(root):
             files[rel] = full
         if truncated:
             break
-    return files, skipped_symlinks, truncated, errors
+    return files, skipped_symlinks, truncated, skipped_content, errors
 
 
 def find_manifest(root, files):
@@ -564,7 +571,7 @@ def tool_marketplace_verify(args):
     if not os.path.exists(root):
         return err("path_missing", "putanja ne postoji: %s" % root)
 
-    files, skipped_symlinks, truncated, scan_errors = collect_files(root)
+    files, skipped_symlinks, truncated, skipped_content, scan_errors = collect_files(root)
     if not files:
         return err("no_files", "nema regularnih fajlova za provjeru")
 
@@ -619,7 +626,7 @@ def tool_marketplace_verify(args):
         manifest_error = manifest_error or "manifest_missing"
 
     complete = bool(manifest) and hashes_ok and not unexpected and not truncated \
-        and not skipped_symlinks and not scan_errors
+        and not skipped_symlinks and not skipped_content and not scan_errors
     sig = signature
     named = bool(manifest and manifest.get("name") and manifest.get("version"))
     score = trust_score(complete, sig, bool(manifest), unexpected, named)
@@ -653,6 +660,7 @@ def tool_marketplace_verify(args):
         "unexpected": unexpected,
         "hash_errors": hash_errors,
         "skipped_symlinks": skipped_symlinks,
+        "skipped_content": skipped_content,
         "scan_errors": scan_errors,
         "truncated": truncated,
         "complete": complete,
